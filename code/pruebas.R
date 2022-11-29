@@ -3,54 +3,62 @@ gc() #Free unused R memory
 cat("\014") #Clear console
 
 #Librerias
-library('pdftools') #Manipulacion de PDFs
-library('dplyr') #Manipulacion de datos y pipes
-library('stringr') #Manipulacion de strings
-library('ggplot2') #Herramientas graficas
-library('stopwords') #Manejo de stopwords
-library('SnowballC')
-library('tidytext') #Tokenizacion
-library('topicmodels') #LDA
-library("pdfsearch")
-
-txt<-pdf_text('ejemplo.pdf') 
-
-prueba1<-txt[12]#Conociendo el numero de pagina
-prueba11<-txt[13]
-
-txt<-unlist(txt)
-txt<-tolower(txt) #texto a minusculas
-
-#txt<-tolower(stri_trans_general(txt,"Latin-ASCII")) #minusculas sin acentos
+suppressMessages(suppressWarnings(library('pdftools')))    #Manipulacion de PDFs
+suppressMessages(suppressWarnings(library('dplyr')))       #Manipulacion de datos y pipes
+suppressMessages(suppressWarnings(library('stringr')))     #Manipulacion de strings
+suppressMessages(suppressWarnings(library('ggplot2')))     #Herramientas graficas
+suppressMessages(suppressWarnings(library('stopwords')))   #Manejo de stopwords
+suppressMessages(suppressWarnings(library('tidytext')))    #Tokenizacion
+suppressMessages(suppressWarnings(library('SnowballC')))   #Diccionario stopwords español
+suppressMessages(suppressWarnings(library('topicmodels'))) #LDA
+suppressMessages(suppressWarnings(library('stringi')))     #quitar acentos
+suppressMessages(suppressWarnings(library("tm")))          #para minería de texto
+suppressMessages(suppressWarnings(library("wordcloud2")))  #nube de palabras
 
 
-res<-data.frame(str_detect(txt,"introduccio"))
-colnames(res)<-"Result"
-res<-subset(res,res$Result==TRUE)
-pagina<-as.integer(row.names(res)) #sin conocer el numero de pagina
-paginai<-pagina[2]+1
+#####  Practica con un trabajo #####
+
+txt<-pdf_text("Modelacion-Ocurrencia-Eventos-Fernandez-Fabio-3752-2020.pdf")
+txt<-gsub(pattern ="[0-9]+",'',txt)#se eliminan numeros
+txt<-tolower(stri_trans_general(txt,"Latin-ASCII")) #minusculas sin acentos
+txt<-paste(txt,collapse = '') #todo el texto en una linea 
+txt<-as_tibble(txt) #se cambia el tipo de objeto para manipulacion
+
+# Tokenizacion
+tokens <-txt %>% unnest_tokens(word,value)
+
+#Stop words
+stop_words_es <- stopwords(language = "es", source = "snowball") #español
+stop_words_en <- stopwords(language = "en", source = "smart") #ingles
+
+#Se agregan las letras del abecedario, ea y espacio en blanco
+stop_words_es <- append(stop_words_es,c(letters, "ea",'',"µ","et","al","θ","π","λ","σ","τ")) #stopwords español
+stop_words_en <- append(stop_words_en,c("abstract")) #stopwords ingles
+
+#Eliminacion de stopwords en español
+dflimpio <- tokens %>% filter(!(word %in% stop_words_es))
+
+#Eliminacion de stopwords en ingles
+dflimpio1 <- dflimpio %>% filter(!(word %in% stop_words_en))
+
+dflimpio1
+
+#lematizacion
+dffinal <- dflimpio1 %>% mutate(word=SnowballC::wordStem(word,language = 'es'))
+length(unique(dffinal$word))
 
 
-prueba2<-txt[pagina[2]]
-prueba2
-
-prueba2<-prueba2 %>% str_split("\n") %>% 
-  str_squish() %>%  strsplit(split= "\\,\\s\\\"")
+corpuss <- Corpus(VectorSource(dflimpio1))
 
 
-prueba2[[1]]
-prueba2df<-as_tibble(prueba2[[1]])
-head(prueba2df)
+#descriptivas
 
-texto<-prueba2[[1]]
-texto
+mtd <- TermDocumentMatrix(corpuss)
+m <- as.matrix(mtd)
+v <- sort(rowSums(m),decreasing=TRUE)
+d <- data.frame(word = names(v),freq=v)
 
-head(result)
 
-result <- heading_search(txt, headings = 'Introducción')
-
-result
-result$line_text[2]
-
- result$lre
+wordcloud2(data = d, size = 0.5, shape = "cloud",
+           color="random-dark", ellipticity = 0.5)
  
