@@ -16,9 +16,17 @@ suppressMessages(suppressWarnings(library("tm")))          #para minería de tex
 suppressMessages(suppressWarnings(library("wordcloud2")))  #nube de palabras
 
 
+##Lista de documentos
+
+list_tesis = list.files("./../data/")
+txt <- c()
+for(tesis in list_tesis){
+  txt[[tesis]]<-pdf_text(sprintf("./../data/%s",tesis))
+}
+
 #####  Practica con un trabajo #####
 
-txt<-pdf_text("Modelacion-Ocurrencia-Eventos-Fernandez-Fabio-3752-2020.pdf")
+txt<-pdf_text("./../data/ejemplo.pdf")
 txt<-gsub(pattern ="[0-9]+",'',txt)#se eliminan numeros
 txt<-tolower(stri_trans_general(txt,"Latin-ASCII")) #minusculas sin acentos
 txt<-paste(txt,collapse = '') #todo el texto en una linea 
@@ -28,11 +36,12 @@ txt<-as_tibble(txt) #se cambia el tipo de objeto para manipulacion
 tokens <-txt %>% unnest_tokens(word,value)
 
 #Stop words
-stop_words_es <- stopwords(language = "es", source = "snowball") #español
-stop_words_en <- stopwords(language = "en", source = "smart") #ingles
+stop_words_es <- stopwords::stopwords("es")#español
 
-#Se agregan las letras del abecedario, ea y espacio en blanco
-stop_words_es <- append(stop_words_es,c(letters, "ea",'',"µ","et","al","θ","π","λ","σ","τ")) #stopwords español
+stop_words_en <-  stopwords::stopwords("en") #ingles
+
+#Se agregan las letras del abecedario, ea y espacio en blanco"
+stop_words_es <- append(stop_words_es,c(letters, "ea",'',"µ","et","al","θ","π","λ","σ","τ","distribucion")) #stopwords español
 stop_words_en <- append(stop_words_en,c("abstract")) #stopwords ingles
 
 #Eliminacion de stopwords en español
