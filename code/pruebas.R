@@ -22,6 +22,13 @@ list_tesis = list.files("./../data/")
 txt <- c()
 for(tesis in list_tesis){
   txt[[tesis]]<-pdf_text(sprintf("./../data/%s",tesis))
+  txt[[tesis]]<-paste(txt,collapse = '') #todo el texto en una linea 
+}
+
+
+for (i in 1:length(txt) ) {
+  txt[i]<-gsub(pattern ="[0-9]+",'',txt[i])#se eliminan numeros
+  txt[i]<-tolower(stri_trans_general(txt[i],"Latin-ASCII")) #minusculas sin acentos
 }
 
 #####  Practica con un trabajo #####
