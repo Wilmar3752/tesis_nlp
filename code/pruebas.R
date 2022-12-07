@@ -23,48 +23,53 @@ txt <- c()
 for(tesis in list_tesis){
   txt[[tesis]]<-pdf_text(sprintf("./../data/%s",tesis))
   txt[[tesis]]<-paste(txt,collapse = '') #todo el texto en una linea 
+  txt[[tesis]]<-paste(txt[[tesis]],collapse = '') #todo el texto en una linea 
+  txt[[tesis]]<-tolower(stri_trans_general(txt[[tesis]],"Latin-ASCII")) #minusculas sin acentos
+  txt[[tesis]] <- stri_replace_all_regex(txt[[tesis]],pattern=c('[0-9]+','\\n','_'),replacement=c('','',''),vectorize=FALSE)
 }
 
+x<-txt #copia de la lista
+txt<-x #restaurar copia
 
-for (i in 1:length(txt) ) {
-  txt[i]<-gsub(pattern ="[0-9]+",'',txt[i])#se eliminan numeros
-  txt[i]<-tolower(stri_trans_general(txt[i],"Latin-ASCII")) #minusculas sin acentos
-}
-
-#####  Practica con un trabajo #####
-
-txt<-pdf_text("./../data/ejemplo.pdf")
-txt<-gsub(pattern ="[0-9]+",'',txt)#se eliminan numeros
-txt<-tolower(stri_trans_general(txt,"Latin-ASCII")) #minusculas sin acentos
-txt<-paste(txt,collapse = '') #todo el texto en una linea 
-txt<-as_tibble(txt) #se cambia el tipo de objeto para manipulacion
 
 # Tokenizacion
-tokens <-txt %>% unnest_tokens(word,value)
+tokens<-c()
+for (tesis in list_tesis) {
+  tokens[[tesis]] <-as_tibble(txt[[tesis]]) %>% unnest_tokens(word,value)
+}
 
 #Stop words
 stop_words_es <- stopwords::stopwords("es")#español
-
 stop_words_en <-  stopwords::stopwords("en") #ingles
 
 #Se agregan las letras del abecedario, ea y espacio en blanco"
 stop_words_es <- append(stop_words_es,c(letters, "ea",'',"µ","et","al","θ","π","λ","σ","τ","distribucion")) #stopwords español
 stop_words_en <- append(stop_words_en,c("abstract")) #stopwords ingles
 
-#Eliminacion de stopwords en español
-dflimpio <- tokens %>% filter(!(word %in% stop_words_es))
 
-#Eliminacion de stopwords en ingles
-dflimpio1 <- dflimpio %>% filter(!(word %in% stop_words_en))
-
-dflimpio1
+#Eliminacion de stopwords en español e ingles
+dflimpio<-c()
+dflimpio1<-c()
+for (tesis in list_tesis) {
+  dflimpio[[tesis]] <- tokens[[tesis]] %>% filter(!(word %in% stop_words_es)) #Español
+  dflimpio1[[tesis]] <- dflimpio[[tesis]] %>% filter(!(word %in% stop_words_en))#Ingles
+}
 
 #lematizacion
-dffinal <- dflimpio1 %>% mutate(word=SnowballC::wordStem(word,language = 'es'))
-length(unique(dffinal$word))
+dffinal<-c()
+for (tesis in list_tesis) {
+dffinal[[tesis]] <- dflimpio1[[tesis]] %>% mutate(word=SnowballC::wordStem(word,language = 'es'))
+}
 
 
-corpuss <- Corpus(VectorSource(dflimpio1))
+
+corpuss <- Corpus(VectorSource(dffinal))
+
+#Modelo LDA 
+DTM <- DocumentTermMatrix(corpuss)
+ap_lda <- LDA(x = DTM, k = 2, control = list(seed = 1234))
+ap_topics <- tidy(x = ap_lda, matrix = "beta")#topicos
+
 
 
 #descriptivas
